@@ -3,54 +3,59 @@ pipeline {
 
     stages {
         stage('Build') {
-    steps {
-        echo 'Creating virtual environment and installing dependencies...'
-        dir('python-flask-app') {
-            sh '''
-                python3 -m venv .venv
-                .venv/bin/pip install -r requirements.txt
-            '''
+            steps {
+                echo 'Creating virtual environment and installing dependencies...'
+                dir('python-flask-app') {
+                    sh '''
+                        python3 -m venv .venv
+                        .venv/bin/pip install -r requirements.txt
+                    '''
+                }
+            }
         }
-    }
-}
+
         stage('Test') {
-    steps {
-        echo 'Running tests...'
-        dir('python-flask-app') {
-            sh '''
-                .venv/bin/python -m unittest discover -s . -p 'test*.py' -v
-            '''
+            steps {
+                echo 'Running tests...'
+                dir('python-flask-app') {
+                    sh '''
+                        .venv/bin/python -m unittest discover -s . -p 'test*.py' -v
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying application...'
+                sh '''
+                    mkdir -p python-app-deploy
+                    cp python-flask-app/app.py python-app-deploy/
+                '''
+            }
+        }
+
+        stage('Run Application') {
+            steps {
+                echo 'Running application...'
+                sh '''
+                    nohup python-flask-app/.venv/bin/python \
+                    python-app-deploy/app.py \
+                    > python-app-deploy/app.log 2>&1 &
+                '''
+            }
+        }
+
+        stage('Test Application') {
+            steps {
+                echo 'Testing application...'
+                sh '''
+                    python-flask-app/.venv/bin/python \
+                    python-flask-app/test_app.py
+                '''
+            }
         }
     }
-}
-        stage('Deploy') {
-    steps {
-        echo 'Deploying application...'
-        sh '''
-            mkdir -p /var/jenkins_home/workspace/msp/python-app-deploy
-            cp python-flask-app/app.py /var/jenkins_home/workspace/msp/python-app-deploy/
-        '''
-    }
-}
-        stage('Run Application') {
-    steps {
-        echo 'Running application...'
-        sh '''
-            nohup python-flask-app/.venv/bin/python \
-            python-app-deploy/app.py \
-            > python-app-deploy/app.log 2>&1 &
-        '''
-    }
-}
-        stage('Test Application') {
-    steps {
-        echo 'Testing application...'
-        sh '''
-            python-flask-app/.venv/bin/python \
-            python-flask-app/test_app.py
-        '''
-    }
-}
 
     post {
         success {
